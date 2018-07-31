@@ -1,0 +1,128 @@
+#include <iostream>
+#include <fstream>
+#include <cmath>
+#include <stdlib.h>
+using namespace std;
+const char base_name[] = "Mona" ;
+bool dev_mode = false;
+const int APtype = 2, ADtype = 1, Fixedtype = 0;
+bool probability(int percent)
+{
+	for (int temp = rand() % 100; percent >= 0; percent--)
+		if (temp == percent)
+			return true;
+	return false;
+}
+class Character
+{
+protected:
+	int HP, MaxHP, MP, MaxMP, Atk, Dfs, Spl, Srs, Crt;//Attack, Defense, Spell Power, Spell Resistence, Critical
+	int atk_value = 100, spl_atk_value = 100, heal_value = 100, run_value = 100;//value of action
+	const static int nmlStas = 0, slowStas = 1, parzStas = 2, stunStas = 3, deadStas = 4;//normal, slow, paralize, stun, dead
+	short status = nmlStas;
+	short status_duration = 0;//each number is each turn
+	short character_code = 0;//0:Player, 1:NPC, 2:Monster
+	int pre_atk_type = 0, pre_ene_HP = 10000;
+public:
+	Character(char character_name[20] = base_name, short char_code = 0, int hp = 100000, int mp = 100, int atk = 100, int dfs = 100, int spl = 0, int srs = 0, int crt = 10)//apply stat
+	{
+		HP = MaxHP = hp;
+		MP = MaxMP = mp;
+		Atk = atk;
+		Dfs = dfs;
+		Spl = spl;
+		Srs = srs;
+		Crt = crt;//critical is 100*percent(10 = 0.1%)
+		const char name[20] = { *character_name };
+		character_code = char_code;
+		bool ifbase_name = false;
+		if(name == base_name)
+			ifbase_name = true;
+		pre_atk_type = 0;
+		pre_ene_dmg = 10000;
+	}
+	void damage_in(int damage_type, int damage)
+	{
+		switch (damage_type)
+		{
+		case Fixedtype:
+			HP -= damage;
+			break;
+		case ADtype:
+			HP -= ((100 * damage - Dfs) / (Dfs + 1));
+			break;
+		case APtype:
+			HP -= ((100 * damage - Srs) / (Srs + 10));
+			break;
+		}
+	}
+	int damage_out(int damage_type)
+	{
+		switch(damage_type)
+		{
+		case ADtype:
+			return (Atk * Atk + 100) / (10000 - Atk) * 10000 / Atk;
+			break;
+		case APtype:
+			return (Spl * (Spl + 100)) / (10000 - Spl) * 10000 / Spl;
+		}
+	}
+	bool HealByRatio(int heal_ratio)
+	{
+		if (status == 4)
+			return false;
+		HP += MaxHP * (heal_ratio / 100.0);
+		return true;
+	}
+	bool HealByAmmount(int heal_ammount)
+	{
+		if (status == 4)
+			return false;
+		HP += heal_ammount;
+		return true;
+	}
+	int give_HP_by_100_percent()
+	{
+		return (int)((double)HP / (double)MaxHP * 10000.0);
+	}
+	int give_status()
+	{
+		return status;
+	}
+	void calc_value(Character *Enemy)
+	{
+		//calculaing action's value
+		switch(pre_atk_type)
+		{
+		case ADtype:
+			atk_value += (Atk * 0.1 + (pre_ene_HP - Enemy->give_HP_100_percent())) * (Atk * 0.3 - (pre_ene_HP - Enemy->give_HP_100_percent())) / abs(Atk * 0.3 - (pre_ene_HP - Enemy->give_HP_100_percent()));
+			break;
+		case APtype:
+			spl_atk_value += (Spl * 0.1 + (pre_ene_HP - Enemy->give_HP_100_percent())) * (Spl * 2 - (pre_ene_HP - Enemy->give_HP_100_percent())) / abs(Spl * 2 - (pre_ene_HP - Enemy->give_HP_100_percent()));
+			break;
+		}
+		if(Spl == 0)
+			spl_atk_value = 0;
+		if((100 * HP / MaxHP) < 30)
+			heal_value = 200;
+		else
+			heal_value = 100;
+	}
+	void Status_check()
+	{
+		status_duration--;
+		if(status_duration <= 0)
+		{
+			status_duration = 0;
+			status = 0;
+		}
+		if (HP == 0)
+		{
+			status = 4;
+			status_duration = 999999;
+		}
+		if (HP > MaxHP)
+			HP = MaxHP;
+	}
+	
+}

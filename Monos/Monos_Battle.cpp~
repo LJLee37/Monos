@@ -1,0 +1,255 @@
+//Monos Battle System
+//2018.05.07 20:30(rewrite date) GMT +9
+#include <Monoslib.h>
+#line 1 "Monos_Battle.cpp"
+	int give_HP_100_percent()
+	{
+		return (int)((double)HP / (double)MaxHP * 10000.0);
+	}
+	int give_status()
+	{
+		return status;
+	}
+	void calc_value(Character *Enemy)
+	{
+		//calculaing action's value
+		func_code = 7;
+		func_time++;
+		switch(pre_atk_type)
+		{
+		case 1:
+			atk_value += (Atk * 0.1 + (pre_ene_HP - Enemy->give_HP_100_percent())) * (Atk * 0.3 - (pre_ene_HP - Enemy->give_HP_100_percent())) / abs(Atk * 0.3 - (pre_ene_HP - Enemy->give_HP_100_percent()));
+			break;
+		case 2:
+			spl_atk_value += (Spl * 0.1 + (pre_ene_HP - Enemy->give_HP_100_percent())) * (Spl * 2 - (pre_ene_HP - Enemy->give_HP_100_percent())) / abs(Spl * 2 - (pre_ene_HP - Enemy->give_HP_100_percent()));
+			break;
+		}
+		if(Spl == 0)
+			spl_atk_value = 0;
+		if((100 * HP / MaxHP) < 30)
+			heal_value = 200;
+		else
+			heal_value = 100;
+	}
+	int AI_action()
+	{
+		func_code = 9;
+		func_time++;
+		cout << "AI is choosing action..." << endl;//choose action by action's value
+		int priority1, priority2, priority3;
+		if(atk_value >= spl_atk_value)
+		{
+			if(atk_value >= heal_value)
+			{
+				if(atk_value >= run_value)
+					return 1;
+				else
+					return 3;
+			}
+			else
+			{
+				if(heal_value >= run_value)
+				{
+					priority1 = 4;
+					if(atk_value >= run_value)
+						priority2 = 1;
+					else
+						priority2 = 3;
+				}
+				else
+					return 3;
+			}
+		}
+		else
+		{
+			if(spl_atk_value >= heal_value)
+			{
+				if(spl_atk_value >= run_value)
+				{
+					priority1 = 2;
+					if(atk_value >= heal_value)
+					{
+						if(atk_value >= run_value)
+							priority2 = 1;
+						else
+							priority2 = 3;
+					}
+					else
+					{
+						if(heal_value >= run_value)
+						{
+							priority2 = 4;
+							if(atk_value >= run_value)
+								priority3 = 1;
+							else
+								priority3 = 3;
+						}
+						else
+							priority2 = 3;
+					}
+				}
+				else
+				{
+					if(heal_value >= run_value)
+					{
+						priority1 = 4;
+						if(spl_atk_value >= run_value)
+						{	
+							priority2 = 2;
+							if(atk_value >= run_value)
+								priority3 = 1;
+							else
+								priority3 = 3;
+						}
+						else
+							priority2 = 3;
+					}
+				else
+					return 3;
+				}
+			}
+			else
+			{
+				if(heal_value >= run_value)
+				{
+					priority1 = 4;
+					if(atk_value >= run_value)
+							priority2 = 1;
+						else
+							priority2 = 3;
+				}
+				else
+					return 3;
+			}
+		}
+		switch(priority1)
+		{
+		case 2:
+			if(Mp >= 20)
+				return priority1;
+			else
+			{
+				switch(priority2)
+				{
+				case 1:
+				case 3:
+					return priority2;
+					break;
+				case 4:
+					if(MP >= 10)
+						return priority2;
+					else
+						return priority3;
+				}
+			}
+			break;
+		case 4:
+			if(MP >= 10)
+				return priority1;
+			else
+				return priority2;
+		}
+	}
+	int action_choose(Character *Enemy)
+	{
+		func_code = 8;
+		func_time++;
+		//clear screen
+		cout << "추천도:" << endl;
+		cout << "공격 : " << atk_value << endl;
+		cout << "마법공격 : " << spl_atk_value << endl;
+		cout << "도주 : " << run_value << endl;
+		cout << "자가치유 : " << heal_value << endl;
+		cout << endl;
+		cout << "할 행동을 선택하십시오." << endl;
+		cout << "1: 공격\t2: 마법공격(마나 20)" << endl;
+		cout << "3: 도주\t2: 자가치유(마나 10)" << endl;
+		cout << "선택 : ";
+		int_in = rand() % 4 + 1;
+		return int_input();
+	}
+	int AI_test(int v1, int v2, int v4, int mp)
+	{
+		func_code = 10;
+		func_time++;
+		int t1, t2, t4, tmp, tmmp, rtn;
+		t1 = atk_value;
+		t2 = spl_atk_value;
+		t4 = heal_value;
+		tmp = MP;
+		tmmp = MaxMP;
+		atk_value = v1;
+		spl_atk_value = v2;
+		heal_value = v4;
+		MP = MaxMP = mp;
+		rtn = AI_action();
+		atk_value = t1;
+		spl_atk_value = t2;
+		heal_value = t4;
+		MP = tmp;
+		MaxMP = tmmp;
+		return rtn;
+	}
+	void Conduct_action(bool player, Character *Enemy)
+	{
+		int action;
+		if(player)
+			action = action_choose(*Enemy);
+		else
+			action = AI_action();
+		switch(action)
+		{
+		case 1:
+			damage_out(1);
+			break;
+		case 2:
+			damage_out(2);
+			MP -= 20;
+			break;
+		case 3:
+			cout << name << "은(는) ";
+			if(probability(50))
+			{
+				cout << "성공적으로 도망쳤다" << endl;
+				//...
+			}
+			else
+			{
+				cout << "도망에 실패했다!" << endl;
+				//...
+			}
+		}
+	}
+};
+bool runtime_test()
+{
+	//func_code & func_time
+	Character t1, t2("monster",2);
+	runtime_test = true;
+	cout << "런타임 테스트중...";
+}
+int battle(Character *C1, Character *C2)
+{
+	try
+	{
+
+	}
+	catch
+	{
+		ofstream log();
+		log.open("p47log.txt");
+		log << func_code << "\t" << func_time << endl;
+		log.close();
+		cout << "Log writing complete. Exiting..." << endl;
+		return 0;
+	}
+}
+int main()
+{
+	if(runtime_test())
+	{
+		cout << "런타임 테스트 성공!" << endl;
+		battle();
+	}
+	return 0;
+}
